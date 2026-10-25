@@ -4,7 +4,7 @@ Predict Network-on-Chip performance from **topology + routing + traffic**, then 
 
 We model Mesh, Torus, Ring, and Tree as graphs (NetworkX), predict low-load latency from hop count and saturation from the busiest link, and validate against cycle-accurate Garnet sweeps. Milestone 1: ~1k runs on 16 cores; routing-aware saturation within ~5% of simulation (Ring deadlock is a known gap).
 
-**Team:** Steve Cho, Kushal Agrawal (CMU 18-755)
+**Team:** Steve Cho, Kushal Agrawal 
 
 For ideas, theory, results, stretch goals, and references, see **[Documentation/Project_Documentation.md](Documentation/Project_Documentation.md)**.
 
