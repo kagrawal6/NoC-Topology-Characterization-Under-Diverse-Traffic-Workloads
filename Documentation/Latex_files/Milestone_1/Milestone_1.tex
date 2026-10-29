@@ -123,7 +123,7 @@ implemented the other three ourselves}. Table~\ref{tab:graph} lists their graph 
 \textbf{Routing.} The routing rule decides which path a packet takes when more than one is possible. In all four topologies, packets always take a shortest path, the most common choice in real NoCs \cite{b5,ocn}. In Mesh and Torus, a packet first travels horizontally until it reaches the destination's column, then
 vertically. In the Ring, it goes whichever way around the circle is shorter. When both directions are equally short (in the Ring or across the Torus), the simulator picks one at random. In the Tree there is only one path: up to the first router the two cores share, then back down.
 
-\textbf{Input data (traffic).} Our input is synthetic traffic created by gem5's built-in traffic generator \cite{b3,b4}, controlled by two settings. The \emph{traffic pattern} decides who sends to whom. For example, in \emph{uniform random} each packet goes to a randomly chosen core; in \emph{transpose} the core at position $(x,y)$ always sends to $(y,x)$; in \emph{bit-complement} each core sends to the core on the opposite side of the chip; and in \emph{neighbor} each core sends to the core next to it. We use all eight built-in patterns (the other four are bit-reverse, bit-rotation, shuffle, and tornado). The \emph{injection rate} $\lambda$ sets how busy the network is: it is the chance that a core sends a packet in a given cycle, so $\lambda = 0.1$ means about one packet every 10 cycles. We use
+\textbf{Input data (Traffic).} Our input is synthetic traffic created by gem5's built-in traffic generator \cite{b3,b4}, controlled by two settings. The \emph{traffic pattern} decides who sends to whom. For example, in \emph{uniform random} each packet goes to a randomly chosen core; in \emph{transpose} the core at position $(x,y)$ always sends to $(y,x)$; in \emph{bit-complement} each core sends to the core on the opposite side of the chip; and in \emph{neighbor} each core sends to the core next to it. We use all eight built-in patterns (the other four are bit-reverse, bit-rotation, shuffle, and tornado). The \emph{injection rate} $\lambda$ sets how busy the network is: it is the chance that a core sends a packet in a given cycle, so $\lambda = 0.1$ means about one packet every 10 cycles. We use
 synthetic traffic because each pattern stresses the network in one specific way. Real programs mix many patterns together, which makes it hard to tell which one caused a slowdown.
 
 \textbf{Assumptions.} We make a few simplifications so that
@@ -235,7 +235,8 @@ $\Theta^{*}$ from RQ2.
 
 To check that gem5 built the same networks we analyzed as graphs, we
 compare average hops under uniform traffic to Table~\ref{tab:graph}.
-They agree within 1\%, so the simulated wiring matches the graph (Sanity check).
+They match in rank order and stay within about 7\%, so the simulated
+wiring is consistent with the graph (Sanity check).
 
 
 \subsection{Preliminary Results}
@@ -277,10 +278,14 @@ Fig.~\ref{fig:results} and Table~\ref{tab:sat} summarize all
   \end{tabular}
 
   \vspace{2pt}
-  \parbox{0.82\textwidth}{\footnotesize $^{\dagger}$Deadlock. \quad
-  $^{\ddagger}$With 16 cores, tornado reduces to the same destination
-  function as neighbor and gives identical results. \quad
-  Simulated values are resolved to the 0.025 sweep step.}
+  \parbox{0.82\textwidth}
+{\footnotesize
+\noindent $^{\dagger}$ Deadlock.\par
+\noindent $^{\ddagger}$ With 16 cores, tornado produces the same
+destination mapping as neighbor, resulting in identical results.\par
+\noindent \textit{Note:} Simulated saturation rates are measured
+at injection-rate increments of 0.025.\par
+}
 \end{table*}
 
 \paragraph{RQ1 (low load)}
@@ -297,18 +302,18 @@ entering and leaving the network. So a shorter-path topology is always
 faster at low load: Torus wins, Tree loses.
 
 \paragraph{RQ2 (high load)}
-When the network is busy, the busiest-link model predicts saturation
-well. Fig.~\ref{fig:results}(C) and Table~\ref{tab:sat} show a mean
-error of only 5.3\%. Two checks from Section~III land exactly: Tree +
-bit-complement saturates at $0.125$, and Mesh + bit-complement at
-$0.50$.
+Fig.~\ref{fig:results}(C) and Table~\ref{tab:sat} (excluding Ring
+deadlock) show a mean absolute error of about 0.08
+($\approx$10\% relative to $\Theta^{*}$). Tree and Mesh
+bit-complement match exactly ($0.125$ and $0.50$). The largest misses
+are $\Theta^{*}=1$ cases (e.g., Mesh uniform $1.00$ vs.\ $0.63$), due
+to router contention below.
 
 Under uniform traffic (Fig.~\ref{fig:results}(A)), the networks clog
-in this order: Tree ($0.225$), Ring ($0.275$), Mesh ($0.625$), Torus
-($0.75$). That is the same order as bisection width in
+in this order: Tree ($0.225$), Ring ($0.275$, deadlock), Mesh ($0.625$),
+Torus ($0.75$). That is the same order as bisection width in
 Table~\ref{tab:graph} (1, 2, 4, 8 links). Which topology is best also
-depends on the traffic: for nearby (neighbor) traffic, Mesh and Torus
-tie; for cross-chip (bit-complement) traffic, Torus handles about
+depends on the traffic: for nearby (neighbor) traffic, Mesh and Torus tie at $0.80$; for cross-chip (bit-complement) traffic, Torus handles about
 $1.6\times$ more load because wrap-around links give packets a shorter
 path across the chip.
 
@@ -321,7 +326,7 @@ Two effects are outside the graph model:
   that waste is not in the graph.
   \item \textbf{Deadlock.} For the Ring under uniform traffic, the
   model predicts $0.50$, but the network freezes at $0.275$ and almost
-  no packets arrive. Packets going both ways around the circle wait on each other forever. A standard fix is to split the Ring's buffers into virtual-channel classes at a dateline \cite{b6,ocn}; adding that is a
+  no packets arrive. This behavior suggests a deadlock behavior, where packets going both ways around the circle wait on each other forever. A standard fix is to split the Ring's buffers into virtual-channel classes at a dateline \cite{b6,ocn}; adding that is a
   next step.
 \end{itemize}
 
@@ -337,7 +342,7 @@ next.
 
 Our project focuses on the impact of structural properties and traffic patterns on NoC's latency and throughput. Our preliminary results showed that at low injection rates, latency is significantly correlated with path length, while at high injection rates, the busiest links fill up, and the network saturates.
 
-For the final presentation, we plan to complete a full set of simulations of throughput and latency across all topologies, traffic patterns, and injection rates, and further analyze the relationship between graph properties and measured performance. We also plan to investigate the type of NoC topology and the design choices of modern processors and accelerators. In addition, we need to resolve the Ring (and Torus) deadlock and re-running those cases. Steve will implement the graph-metric and stats.txt parser script and focus on Mesh and Torus topology analysis. Kushal will be in charge of implementing the sweep script and Ring and Tree topology analysis. Both members will work together on the final comparison, real-world case study, presentation, and report.
+For the final presentation, we plan to perform any additional set of simulations of throughput and latency as needed and further analyze the relationship between graph properties and measured performance. We also plan to investigate the type of NoC topology and the design choices of modern processors and accelerators. In addition, we need to resolve the Ring (and Torus) deadlock and re-running those cases. Steve will continue developing the graph-metric and stats.txt parser script and focus on Mesh and Torus topology analysis. Kushal will continue to develop the sweep script and Ring and Tree topology analysis. Both members will work together on the final comparison, real-world case study, presentation, and report.
 
 
 \begin{thebibliography}{00}
